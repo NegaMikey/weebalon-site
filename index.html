@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weebalon</title>
+<meta name="description" content="A modern fantasy tabletop world. Eon 359 — the Final Eon.">
+
+<!-- Social preview. Update the URL once the domain is live. -->
+<meta property="og:title" content="Weebalon">
+<meta property="og:description" content="Eon 359 — the Final Eon. The city of Perganum.">
+<meta property="og:image" content="perganum.png">
+<meta property="og:type" content="website">
+
+<style>
+  /* Weebalon palette — same colours the map is painted in. */
+  :root{
+    --ink:      #14141C;
+    --ink-2:    #1E1E2A;
+    --cream:    #F2EADA;
+    --stone:    #D6CBA8;
+    --red:      #D65463;
+    --red-dark: #962148;
+    --peri:     #AFB5D6;
+    --sage:     #AFD6B7;
+    --gray:     #A1A0A8;
+    --gray-sh:  #4A494E;
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{margin:0;padding:0;}
+
+  body{
+    background:var(--ink);
+    color:var(--cream);
+    font-family:"Courier New",Courier,monospace;
+    font-size:15px;
+    line-height:1.6;
+    /* faint vignette so the map reads as lit from within the dark */
+    background-image:radial-gradient(ellipse at 50% 38%, #1E1E2A 0%, #14141C 62%);
+    padding:0 16px 80px;
+  }
+
+  .wrap{max-width:1200px;margin:0 auto;}
+
+  /* ---------- title ---------- */
+  header{
+    text-align:center;
+    padding:56px 0 28px;
+  }
+
+  h1{
+    margin:0;
+    font-size:clamp(38px,9vw,84px);
+    letter-spacing:clamp(6px,2.2vw,20px);
+    /* trailing letter-spacing pushes the word off-centre; pull it back */
+    text-indent:clamp(6px,2.2vw,20px);
+    line-height:1;
+    color:var(--cream);
+    /* hard offset shadow, no blur — the pixel-art way to do depth */
+    text-shadow:4px 4px 0 var(--red-dark);
+  }
+
+  .tagline{
+    margin:18px 0 0;
+    color:var(--stone);
+    font-size:clamp(12px,2.6vw,15px);
+    letter-spacing:3px;
+    text-transform:uppercase;
+  }
+
+  .rule{
+    margin:26px auto 0;
+    max-width:420px;
+    color:var(--gray-sh);
+    font-size:13px;
+    letter-spacing:2px;
+    user-select:none;
+  }
+
+  /* ---------- map ---------- */
+  figure{margin:34px 0 0;}
+
+  .map-frame{
+    border:3px solid var(--gray-sh);
+    background:var(--ink-2);
+    padding:8px;
+    line-height:0;           /* kill inline-image gap */
+  }
+
+  .map-frame img{
+    display:block;
+    width:100%;
+    height:auto;
+    /* the whole point — never let the browser smooth these pixels */
+    image-rendering:pixelated;
+    image-rendering:-moz-crisp-edges;
+    image-rendering:crisp-edges;
+  }
+
+  figcaption{
+    margin-top:12px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 22px;
+    justify-content:space-between;
+    color:var(--gray);
+    font-size:12px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+  }
+  figcaption .place{color:var(--peri);}
+
+  /* ---------- lore strip ---------- */
+  .strip{
+    margin:56px 0 0;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+    gap:1px;
+    background:var(--gray-sh);   /* shows through as hairline rules */
+    border:1px solid var(--gray-sh);
+  }
+  .cell{
+    background:var(--ink);
+    padding:20px 18px;
+  }
+  .cell h2{
+    margin:0 0 8px;
+    font-size:11px;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    color:var(--red);
+  }
+  .cell p{margin:0;color:var(--stone);font-size:14px;}
+
+  /* ---------- footer ---------- */
+  footer{
+    margin-top:56px;
+    padding-top:20px;
+    border-top:1px solid var(--gray-sh);
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 20px;
+    justify-content:space-between;
+    color:var(--gray-sh);
+    font-size:12px;
+    letter-spacing:1px;
+  }
+  footer .eon{color:var(--red-dark);}
+
+  @media (max-width:620px){
+    header{padding:36px 0 18px;}
+    .rule{max-width:260px;overflow:hidden;white-space:nowrap;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>WEEBALON</h1>
+    <p class="tagline">Eon 359 &mdash; the Final Eon</p>
+    <p class="rule">&#9670; &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash; &#9670; &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash; &#9670;</p>
+  </header>
+
+  <figure>
+    <div class="map-frame">
+      <img src="perganum.png" alt="Map of the city of Perganum on the planet Edin" width="1200" height="960">
+    </div>
+    <figcaption>
+      <span class="place">Perganum &middot; Edin</span>
+      <span>Capital of Humanity</span>
+    </figcaption>
+  </figure>
+
+  <section class="strip">
+    <div class="cell">
+      <h2>The Clock</h2>
+      <p>Two sister planets drift closer every eon. When they touch, the wall between
+         worlds thins and the rifts open. This is the last one.</p>
+    </div>
+    <div class="cell">
+      <h2>The City</h2>
+      <p>Perganum runs on magic the way other cities run on electricity. Trolleys,
+         convenience stores, a mall &mdash; and a wall holding back the Abyss.</p>
+    </div>
+    <div class="cell">
+      <h2>The School</h2>
+      <p>Weebalon University trains Chosen Ones. Four years on Edin, six more on Ioto,
+         if you live that long.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>weebalon.com</span>
+    <span class="eon">Rifting Season approaches</span>
+  </footer>
+
+</div>
+</body>
+</html>

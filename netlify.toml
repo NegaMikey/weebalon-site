@@ -1,0 +1,20 @@
+# Netlify build settings for a plain static site.
+# No build step — the files at the repo root ARE the site.
+
+[build]
+  publish = "."
+
+# The map is large and changes rarely: cache it hard.
+# Rename the file (perganum-v2.png) when you update it, so browsers
+# fetch the new one instead of serving a year-old copy from cache.
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# HTML must NOT be cached long, or edits won't show up for people
+# who've already visited.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
