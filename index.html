@@ -89,15 +89,50 @@
     line-height:0;           /* kill inline-image gap */
   }
 
-  .map-frame img{
+  /* Stack: fixed 5:4 box so both layers can sit absolutely without
+     collapsing the container or shifting the page on toggle. */
+  .map-stack{
+    position:relative;
+    width:100%;
+    aspect-ratio:5 / 4;
+  }
+
+  .map-stack img{
+    position:absolute;
+    inset:0;
     display:block;
     width:100%;
-    height:auto;
+    height:100%;
     /* the whole point — never let the browser smooth these pixels */
     image-rendering:pixelated;
     image-rendering:-moz-crisp-edges;
     image-rendering:crisp-edges;
+    transition:opacity .12s linear;
   }
+  .map-stack img.is-hidden{opacity:0;}
+
+  /* ---------- toggle ---------- */
+  .map-toolbar{
+    display:flex;
+    justify-content:flex-end;
+    margin-bottom:10px;
+  }
+  .segmented{display:flex;border:2px solid var(--gray-sh);}
+  .seg{
+    font-family:inherit;
+    font-size:12px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    padding:7px 14px;
+    border:0;
+    background:var(--ink-2);
+    color:var(--gray);
+    cursor:pointer;
+  }
+  .seg + .seg{border-left:2px solid var(--gray-sh);}
+  .seg:hover{color:var(--cream);}
+  .seg.is-active{background:var(--stone);color:var(--ink);}
+  .seg:focus-visible{outline:2px solid var(--peri);outline-offset:2px;}
 
   figcaption{
     margin-top:12px;
@@ -165,9 +200,24 @@
   </header>
 
   <figure>
-    <div class="map-frame">
-      <img src="perganum.png" alt="Map of the city of Perganum on the planet Edin" width="1200" height="960">
+    <div class="map-toolbar">
+      <div class="segmented" role="group" aria-label="Map labels">
+        <button type="button" id="btn-plain" class="seg is-active" aria-pressed="true">Labels off</button>
+        <button type="button" id="btn-labeled" class="seg" aria-pressed="false">Labels on</button>
+      </div>
     </div>
+
+    <div class="map-frame">
+      <!-- Both maps are stacked and cross-faded, so toggling is instant with no
+           reload flash. Same dimensions, so no layout shift either. -->
+      <div class="map-stack">
+        <img id="map-plain" src="perganum.png"
+             alt="Map of Perganum, unlabelled" width="1200" height="960">
+        <img id="map-labeled" class="is-hidden" src="perganum-labeled.png"
+             alt="Map of Perganum with district and landmark names" width="1200" height="960">
+      </div>
+    </div>
+
     <figcaption>
       <span class="place">Perganum &middot; Edin</span>
       <span>Capital of Humanity</span>
@@ -198,5 +248,35 @@
   </footer>
 
 </div>
+
+<script>
+  (function () {
+    var plainBtn = document.getElementById('btn-plain');
+    var labelBtn = document.getElementById('btn-labeled');
+    var plainMap = document.getElementById('map-plain');
+    var labelMap = document.getElementById('map-labeled');
+
+    function show(labels) {
+      labelMap.classList.toggle('is-hidden', !labels);
+      plainMap.classList.toggle('is-hidden', labels);
+
+      labelBtn.classList.toggle('is-active', labels);
+      plainBtn.classList.toggle('is-active', !labels);
+
+      labelBtn.setAttribute('aria-pressed', String(labels));
+      plainBtn.setAttribute('aria-pressed', String(!labels));
+    }
+
+    plainBtn.addEventListener('click', function () { show(false); });
+    labelBtn.addEventListener('click', function () { show(true); });
+
+    // L toggles, for anyone running this on a laptop at the table.
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'l' || e.key === 'L') {
+        show(labelMap.classList.contains('is-hidden'));
+      }
+    });
+  })();
+</script>
 </body>
 </html>
