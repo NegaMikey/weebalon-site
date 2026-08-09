@@ -40,36 +40,66 @@
    plugin. Keystrokes land on the FOCUSED window: click the board once.
    ==================================================================== */
 
-/* -- 1. ENCOUNTER DEFINITION -----------------------------------------
-   This block is the whole encounter. Edit it, reload, done.
-   Later this becomes one file per encounter. */
+/* -- 1. ENCOUNTER ----------------------------------------------------
+   SESSION ONE: PERGANUM, WALLSIDE
+
+   A kaiju surfaces from the Abyss outside the wall. A colossal launches
+   and kills it in seconds. Routine. Nobody panics; the recorded
+   announcement is on its third revision.
+
+   Then the debris arrives. The thing that saved everyone is the thing
+   about to kill them.
+
+   The players cannot fight this. They can only decide who they reach.
+   Six civilians, six rounds, and the arithmetic does not work. That is
+   the point. The score is a number, not a win.
+------------------------------------------------------------------- */
 
 const ENCOUNTER = {
-  objective: "HOLD THE TROLLEY 6 ROUNDS",
+  objective: "EVACUATE THE STREET",
   law:       "NO DASHING",
   lawActive: true,
   clockMax:  6,
+  map:       null,           // e.g. "wallside.png" at 512x256
 
-  // optional board art: set to a path like "/maps/trolley.png", or null
-  map: null,
+  exitCols: [14, 15],        // metro entrance. Debris comes over the wall (left).
 
-  // elevation tints. level -2..+3
   elevation: [
-    {x: 0,  y: 0, lv: 2},  {x: 1,  y: 0, lv: 2},  {x: 2,  y: 0, lv: 1},
-    {x: 0,  y: 1, lv: 1},  {x: 1,  y: 1, lv: 1},
-    {x: 14, y: 6, lv: -1}, {x: 15, y: 6, lv: -1},
-    {x: 14, y: 7, lv: -2}, {x: 15, y: 7, lv: -2},
+    {x: 0, y: 0, lv: 2}, {x: 1, y: 0, lv: 2},    // the wall
+    {x: 0, y: 1, lv: 2}, {x: 1, y: 1, lv: 1},
+    {x: 6, y: 3, lv: 1}, {x: 7, y: 3, lv: 1},    // trolley platform
+    {x: 6, y: 4, lv: 1}, {x: 7, y: 4, lv: 1},
+    {x: 13, y: 7, lv: -1}, {x: 14, y: 7, lv: -2}, {x: 15, y: 7, lv: -2},
   ],
 
-  // side: "ally" | "enemy" | "neutral"
+  /* Debris sweeps left to right, two columns a round, with a gap that
+     moves every round so players must re-read the board constantly.
+     Past rounds stay as impassable rubble: the board shrinks. */
+  impacts: [
+    {round: 2, cols: [0, 1], safeRows: [3]},
+    {round: 3, cols: [2, 3], safeRows: [6]},
+    {round: 4, cols: [4, 5], safeRows: [1]},
+    {round: 5, cols: [6, 7], safeRows: [4]},
+    {round: 6, cols: [8, 9], safeRows: [2, 5]},
+  ],
+
   combatants: [
-    {name: "KESTA",  tag: "KE", side: "ally",    x: 3,  y: 3, hp: 9,  max: 10},
-    {name: "ORVIL",  tag: "OR", side: "ally",    x: 5,  y: 6, hp: 7,  max: 10},
-    {name: "SUNNY",  tag: "SU", side: "ally",    x: 2,  y: 6, hp: 10, max: 10},
-    {name: "WARDEN", tag: "WA", side: "enemy",   x: 11, y: 2, hp: 8,  max: 8},
-    {name: "TOUGH",  tag: "T1", side: "enemy",   x: 12, y: 3, hp: 4,  max: 4},
-    {name: "TOUGH",  tag: "T2", side: "enemy",   x: 13, y: 2, hp: 4,  max: 4},
-    {name: "CONDUCTOR", tag: "CO", side: "neutral", x: 8, y: 4, hp: 3, max: 3},
+    {name: "KESTA",  tag: "KE", side: "ally",    x: 9,  y: 2, hp: 10, max: 10},
+    {name: "ORVIL",  tag: "OR", side: "ally",    x: 10, y: 4, hp: 9,  max: 10},
+    {name: "SUNNY",  tag: "SU", side: "ally",    x: 10, y: 6, hp: 10, max: 10},
+    {name: "MARO",   tag: "MA", side: "ally",    x: 11, y: 3, hp: 8,  max: 8},
+    {name: "MARSHAL PELL", tag: "PL", side: "neutral", x: 12, y: 5, hp: 6, max: 6},
+  ],
+
+  /* Not in initiative. They are the objective, not participants.
+     Move one onto an exit column and it counts itself. */
+  civilians: [
+    {name: "NOODLE VENDOR", tag: "NV", x: 1, y: 5},
+    {name: "OLD MAN",       tag: "OM", x: 2, y: 2},
+    {name: "BORED TEEN",    tag: "BT", x: 3, y: 7},
+    {name: "A KID",         tag: "KD", x: 5, y: 4},
+    {name: "TROLLEY RIDER", tag: "TR", x: 7, y: 6},
+    {name: "DOG WALKER",    tag: "DW", x: 9, y: 7},
   ],
 };
 
@@ -103,9 +133,10 @@ const C = {
 };
 
 const SIDE = {
-  ally:    {fill: C.teal,  hi: C.tealHi},
-  enemy:   {fill: C.blood, hi: C.bloodHi},
-  neutral: {fill: C.gold,  hi: C.goldHi},
+  ally:     {fill: C.teal,      hi: C.tealHi},
+  enemy:    {fill: C.blood,     hi: C.bloodHi},
+  neutral:  {fill: C.gold,      hi: C.goldHi},
+  civilian: {fill: C.parchment, hi: C.parchHi},
 };
 
 /* -- 4. BITMAP FONT (3x5, same table as the Python generator) --------- */
@@ -187,6 +218,7 @@ const EMBEDDED = {
 "wbl_ui_elev_p1_32.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAfklEQVR4nGP8/+GSFMMAAqaBtHzwO+DzH76LdHUAsoUwNqOA3gS6OABmIYzmZfmkT0uLMRwAs5BPRGE/rX2N1QHIjvj/4VIBLCQ+vXngSEsHMOIrB5BD4v+HSwV0dwA9wOAuB0YdMOqAUQeMOmDUAaMOGHXAqANGHTDqAHoAAMSFKgiBjoyBAAAAAElFTkSuQmCC",
 "wbl_ui_elev_p2_32.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAmklEQVR4nGP8/+GSCcMAAqaBtHxQOIAFl8TnP3zbYWxelk+etHIASgigW8onorCfgYGBgVFAr4zmDoBZjkx/evPAkVYWwwA8CnhZPnl+/sO3Herrsk9vHjDAQoCWgBE9GzIK6JX9/3Cpi15pAMMB6I6Bsf9/uNRFdwfQAwx4OTDqgFEHjDpg1AGjDhh1wKgDRh0w6oBRBwy4AwAMajYck+unOwAAAABJRU5ErkJggg==",
 "wbl_ui_elev_p3_32.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAjklEQVR4nGP8/+GSH8MAAqaBtHxQOIAFl8TnP3xzYWxelk/JtHIASgigW8onorCfgYGBgVFAL4bmDoBZjkx/evPAkVYWYzgAFsx8Igr7GQX0YpBDgC4OQHbE/w+XltArBDAS4f8Pl5bAHEPLuIcBxtGCaNQBow4YdcCoA0YdMOqAUQeMOmDUAaMOGGgHAADlIC/9YpgBUwAAAABJRU5ErkJggg==",
+"wbl_ui_exit_32.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAjklEQVR4nGPMf3zjBMMAAkb9FQt00QUdrC16Dhw9UYJLE6XyyIAJm+CBoydKHKwtenBpolSeoAPo6QicDqCXI/A6gB6OIOgAWidIvA6gR27A6QB6ZUWsDqBnOYC1IKInwBkC+DRRKk/QAaMlIT0dMVoSjpaEoyXhaEk4WhKOloSjJeFoScjCwMAweyAdAABYKD3kQUx9xQAAAABJRU5ErkJggg==",
 "wbl_ui_grid_16x8_32.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAEACAYAAADFkM5nAAAFEklEQVR4nO3ZMY0FMRAFwduDYMmZ8RjYIv8sdoKuIvAcTNCSn7XP+wcAtEwHwNrn2k/vuz/7k/vuz/7k/tj9rX3u/9Q4ADBHAABAkAAAgCABAABBAgAAggQAAAQJAAAIEgAAECQAACBIAABAkAAAgCABAABBAgAAggQAAAQJAAAIEgAAECQAACBIAABAkAAAgCABAABBAgAAggQAAAQJAAAIEgAAECQAACBIAABAkAAAgCABAABBAgAAggQAAAQ9a587/QgA4GNrn3d4fzRA7I/vuz/7k/vuz/7k/tj9rX2uLwAACBIAABAkAAAgSAAAQJAAAIAgAQAAQQIAAIIEAAAECQAACBIAABAkAAAgSAAAQJAAAIAgAQAAQQIAAIIEAAAECQAACBIAABAkAAAgSAAAQJAAAIAgAQAAQQIAAIIEAAAECQAACBIAABAkAAAgSAAAQJAAAIAgAQAAQc/a504/AgD42NrnHd4fDRD74/vuz/7kvvuzP7k/dn9rn+sLAACCBAAABAkAAAgSAAAQJAAAIEgAAECQAACAIAEAAEECAACCBAAABAkAAAgSAAAQJAAAIEgAAECQAACAIAEAAEECAACCBAAABAkAAAgSAAAQJAAAIEgAAECQAACAIAEAAEECAACCBAAABAkAAAgSAAAQJAAAIEgAAEDQs/a5048AAD629nmH90cDxP74vvuzP7nv/uxP7o/d39rn+gIAgCABAABBAgAAggQAAAQJAAAIEgAAECQAACBIAABAkAAAgCABAABBAgAAggQAAAQJAAAIEgAAECQAACBIAABAkAAAgCABAABBAgAAggQAAAQJAAAIEgAAECQAACBIAABAkAAAgCABAABBAgAAggQAAAQJAAAIEgAAEPSsfe70IwCAj6193uH90QCxP77v/uxP7rs/+5P7Y/e39rm+AAAgSAAAQJAAAIAgAQAAQQIAAIIEAAAECQAACBIAABAkAAAgSAAAQJAAAIAgAQAAQQIAAIIEAAAECQAACBIAABAkAAAgSAAAQJAAAIAgAQAAQQIAAIIEAAAECQAACBIAABAkAAAgSAAAQJAAAIAgAQAAQQIAAIIEAAAEPWufd/oRAMDHpgNg7XPtp/fdn/3Jffdnf3J/7P7WPtcXAAAECQAACBIAABAkAAAgSAAAQJAAAIAgAQAAQQIAAIIEAAAECQAACBIAABAkAAAgSAAAQJAAAIAgAQAAQQIAAIIEAAAECQAACBIAABAkAAAgSAAAQJAAAIAgAQAAQQIAAIIEAAAECQAACBIAABAkAAAgSAAAQJAAAICgZ+1zpx8BAHxs7fMO748GiP3xffdnf3Lf/dmf3B+7v7XP9QUAAEECAACCBAAABAkAAAgSAAAQJAAAIEgAAECQAACAIAEAAEECAACCBAAABAkAAAgSAAAQJAAAIEgAAECQAACAIAEAAEECAACCBAAABAkAAAgSAAAQJAAAIEgAAECQAACAIAEAAEECAACCBAAABAkAAAgSAAAQJAAAIOhZ+9zpRwAAH1v7vMP7owFif3zf/dmf3Hd/9if3x+5v7XN9AQBAkAAAgCABAABBAgAAggQAAAQJAAAIEgAAECQAACBIAABAkAAAgCABAABBAgAAggQAAAQJAAAIEgAAECQAACBIAABAkAAAgCABAABBAgAAggQAAAQJAAAIEgAAECQAACBIAABAkAAAgCABAABBAgAAggQAAAQ9a587/QgA4Fs/eq9Xed5ax/sAAAAASUVORK5CYII=",
 "wbl_ui_grid_20x15_32.png": "data:image/png;base64,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",
 "wbl_ui_grid_25x20_32.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAKACAYAAABkGxwyAAAPl0lEQVR4nO3asa3kMBQEwdOFIECe4tnAGPnPosdQVQJD4zkN8Lqf9/wDAAAorAPkft6f/U/vuz/7y333Z3+57/7sL/fdn/3V9vm/GgcAAL5HgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAAJnrft7f+hEAAMBH3M97xvvTALI/33d/9pf77s/+ct/92V/uuz/7q+3jCxYAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQOa6n/e3fgQAAPAR9/Oe8f40gOzP992f/eW++7O/3Hd/9pf77s/+avv4ggUAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkLnu5/2tHwEAAHzE/bxnvD8NIPvzffdnf7nv/uwv992f/eW++7O/2j6+YAEAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZK77eX/rRwAAAB9xP+8Z708DyP583/3ZX+67P/vLffdnf7nv/uyvto8vWAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAmet+3rN+BAAA8BHrALmf92f/0/vuz/5y3/3ZX+67P/vLffdnf7V9fMECAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMhc9/P+1o8AAAA+4n7eM96fBpD9+b77s7/cd3/2l/vuz/5y3/3ZX20fX7AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADLX/by/9SMAAICPuJ/3jPenAWR/vu/+7C/33Z/95b77s7/cd3/2V9vHFywAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgMx1P+9v/QgAAOAj7uc94/1pANmf77s/+8t992d/ue/+7C/33Z/91fbxBQsAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAIHPdz/tbPwIAAPiI+3nPeH8aQPbn++7P/nLf/dlf7rs/+8t992d/tX18wQIAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyFz38571IwAAgI9YB8j9vD/7n953f/aX++7P/nLf/dlf7rs/+6vt4wsWAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEDmup/3t34EAADwEffznvH+NIDsz/fdn/3lvvuzv9x3f/aX++7P/mr7+IIFAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJC57uf9rR8BAAB8xP28Z7w/DSD78333Z3+57/7sL/fdn/3lvvuzv9o+vmABAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGQECAAAkBEgAABARoAAAAAZAQIAAGSu+3l/60cAAAAfcT/vGe9PA8j+fN/92V/uuz/7y333Z3+57/7sr7aPL1gAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAABkBAgAAZAQIAACQESAAAEBGgAAAAJnrft7f+hEAAMBH3M97xvvTALI/33d/9pf77s/+ct/92V/uuz/7q+3jCxYAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQEaAAAAAGQECAABkBAgAAJARIAAAQOa6n/esHwEAAHzEOkDu5/3Z//S++7O/3Hd/9pf77s/+ct/92V9tH1+wAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAy1/28v/UjAACAj7if94z3pwFkf77v/uwv992f/eW++7O/3Hd/9lfbxxcsAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAIDMdT/vb/0IAADgI+7nPeP9aQDZn++7P/vLffdnf7nv/uwv992f/dX28QULAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACAjQAAAgIwAAQAAMgIEAADICBAAACBz3c/7Wz8CAAD4iPt5z3h/GkD25/vuz/5y3/3ZX+67P/vLffdnf7V9fMECAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMgIEAAAICNAAACAjAABAAAyAgQAAMhc9/P+1o8AAAA+4n7eM96fBpD9+b77s7/cd3/2l/vuz/5y3/3ZX20fX7AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAICMAAEAADICBAAAyAgQAAAgI0AAAIDMdT/vWT8CAAD4hj9CsUOkdIduwwAAAABJRU5ErkJggg==",
@@ -197,6 +229,8 @@ const EMBEDDED = {
 "wbl_ui_hppip_full_8.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAPUlEQVR4nGNkYGBgEBKV+c+ABbx7/YSRRUhU5v9WYx0MyaOPHzO0MTD8Z8KmExnQQQELzEG4ACMDA35vAgDbGxEE5gdmLAAAAABJRU5ErkJggg==",
 "wbl_ui_hppip_half_8.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAS0lEQVR4nGNkYGBgEBKV+c+ABbx7/YSRRUhU5v9WYx0MyfA7LxgYGBj+M2HTiQwIKmBhYGBgOPr4MRYpVhJMmPSTFacCRgYG/N4EACCDEaV4ryynAAAAAElFTkSuQmCC",
 "wbl_ui_hppip_temp_8.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAPUlEQVR4nGNkYGBgEBKV+c+ABbx7/YSRRUhU5n/suT0YkgeOnmBgyK35z4RNJzKggwIWuINwAEYGBvzeBACgbBG+q8C/zAAAAABJRU5ErkJggg==",
+"wbl_ui_impact_hit_32.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABV0lEQVR4nMWXMQ7CMAxFXdSdmSEn6Y4qVUicBImTIHESJNSFvYJ7eGBmZmEAQxqcxE4a8ARtyH/5xI5Tndv2An+MGgBgQDyFBjXGdANiP7V4Y8xyNvWk2pi9SLrQoAGxj43JAigpIAKQQJSCHO0BEvmFG6TxtQkHxN632ilcoAVSVnmzoITlJGyndDANOYhUMF8tidaBXCdcy9UAHIQUirM8CUAjSsLS8l1LAVwI+uyKaM+N6ty2l9hhxMVqDRv7+/EAe4m44+Jd5YAbi20/v+66G00s+ZtswMaYZRYAiVsTqo9tFcB4dTh6l9ovRAHc9Hs/h89qn7sekpqWLwCu8nFj3Oe+rBAD2OmlmSAXYtQPSH4YE9CWblVP6BP3lWoJiBhAa22or1AD5LTlMYgowBR3ghBEEEAjntrU/vRiwkF4AUpdx1wIFqCUuA3hBSi547mo/n09fwA1pyVQxqmP1gAAAABJRU5ErkJggg==",
+"wbl_ui_impact_warn_32.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAqklEQVR4nO2X0Q2AIAxET+MIbOEWDMEybuQQ7OECfnUIvyQq1RoTCont51GPM+lLaLdM4wq5PAAHgJizJ32WjIfDBZIpfdDDQzgCEPubYLtpcX0PoHIZo6cAan98rf5FU1H9OgPqIbghVA3RBAVeaiqoh9oUkFHQBAW1BjBRUG0AATijwCgwCpqgIFYMkb2K/0kBV7YXaIWwvSBtxzHvPZU/fEw3ppwu+WIDjy+tMXpNmNUAAAAASUVORK5CYII=",
 "wbl_ui_initslot_active_40.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAArElEQVR4nO3ZMQrCQBCF4TeSEyykC6msxWNo61XsvVDOYJXWYtuApAh2gp11LCSCu4XFK2aF9zULW/0MbDNrABDqZkaBHvebWaibeTzvvFsyQ+yxPz5RLRebw8WzJ9Od3ufKN+O3Kr2YrtE8Qhbtevv1HoqfoAJZCmQpkKVAlgJZCmQpkKVAlgJZCmQpkKVAlgJZCmQpkJXtB9P9nLf/mOAQ+89OuDQGlP0N8QIAyxsTJBbS4gAAAABJRU5ErkJggg==",
 "wbl_ui_initslot_done_40.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAAgUlEQVR4nO3QsQmEQBgF4flzQRDNxMgCrOeqvgKMxEwRBPO1gLvIF6wL76tgmAA+vFg0XZ+qus3d8eM6dwACH3ym3IPL/I2MPQzjlMAHn/NBlQ+qfFDlgyofVPmgygdVPqjyQZUPqnxQ5YMqH1T5oKr8g29RzkGAputT7pB/jm2NG8CSnBdrHGwuAAAAAElFTkSuQmCC",
 "wbl_ui_initslot_idle_40.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAApklEQVR4nO3ZMQqDQBCF4bdhS0mxYCdWOYBF6lwhp7ZPKi0EQbYTvMKmUlADKV4xG3hfOdXPwDazDgBCWSVkaJmj86Gs0v3xtG45iWMHAMmvg/7d2tV8UVwDAOBi3PGTPw6m4eUsQlb1rdm9h+w3qECWAlkKZCmQpUCWAlkKZCmQpUCWAlkKZCmQpUCWAlkKZJ3ug8f7nLX/2GAcu+0mnBsH5P0N8QE1bRjG0SP2WgAAAABJRU5ErkJggg==",
@@ -204,6 +238,7 @@ const EMBEDDED = {
 "wbl_ui_nameplate_128x20.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAAAUCAYAAABFyTWeAAAAq0lEQVR4nO3aoQ0CMQCF4VdSSRBNmiCKJTgGYCQ8Q7ABCQaFYgwGwBEsJ0guuRWKgmCwV/H+T1175olfNkhSyqUKdoa+CzHlUre7festGNnlfJSkGj8XpwMROJnOkiRp0ngHGiMAcwRgjgDMEYA5AjBHAOYIwBwBmCMAcwRgjgDMEYC5+HtYrTetdmBE99v1+x3//YCHkHKp88Wy9Q408Ho+FCSehLka+i68ARBnGWqY3ob9AAAAAElFTkSuQmCC",
 "wbl_ui_nameplate_160x20.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAAAUCAYAAAAKlDZOAAAAr0lEQVR4nO3aoQ0CMQCF4VdSSRBNmiCKJTgGYCQ8Q7ABCQaFYgwGwBEsJ0guuRWKgmCw90T/T1175olfNkhSyqUKGNnQdyGmXOp2t3dvQWMu56Mk1fi5OB2IEOOZzpIkaWLegcYRIKwIEFYECCsChBUBwooAYUWAsCJAWBEgrAgQVgQIKwKEVfw9rNYb1w405H67fr/jvx/AGELKpc4XS/cONOj1fChIPMmHx9B34Q3f7xlqIu+J4QAAAABJRU5ErkJggg==",
 "wbl_ui_nameplate_96x20.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAAAUCAYAAAByKzjvAAAAp0lEQVR4nO3ZIQ7CMBjF8feRSjLRpAmi2GWOA3AkPIfgBkswKBTH2AFwy+wmSJbsCkWxYGb7RN9PrZ15yV/WAMCHmCDZLfNkzoeYLtcbe0txXs87ACT3u3i0ipDTvvIAgB15R/EUgEwByBSATAHIFIBMAcgUgEwByBSATAHIFIBMAcjc/6E5nVk7itK/u/Xbbf2QPMyHmA7Hmr2jSJ9xgAF6kmRZ5sm+QNAZasO7cskAAAAASUVORK5CYII=",
+"wbl_ui_rubble_32.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAyklEQVR4nO2WMQ6DMAxFPxXnyMDEBThET8wheoCyVSAOwtQhUuLYbsjPUI9IEe/b/j8ZQph2EOvB/HkXAKP1wLw8Q+r79lqPJgAAcH7enmNlgJw6wK/QBADUUScJAWIx5hFoO6EVQncBHSAawV2LJhW9A0OLuyDlim+3XUHkqZwrkgAlHwP19iXbAUsg/ZKg1UYgAUsQdBfQAZIjaBlITXJAqn5GUPupZQYAyt63PDRcAJrSBpQ2nG69CzSw/Swh4zECdNCBfxDRAS5BwFDvE5zzpAAAAABJRU5ErkJggg==",
 "wbl_ui_sigilframe_40.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAApUlEQVR4nO3YIQ4CMRCF4TekJ2jSBFEsl8PvIdbj8Ku4EJYKkia9QlE1uySIJzrifXLUn2lqxgAgptzhUKvFQky535Z1dsvBc3sAQA9jcF+XeTU/nC9XAMBpcsdfYT9otdiMkGH/H9xvUIEsBbIUyFIgS4EsBbIUyFIgS4EsBbIUyFIgS4EsBbIUyDrcB73dq91v0GLKfdyDvfm8XzDA37MOrRb7AovWGWZzAqDHAAAAAElFTkSuQmCC",
 "wbl_ui_status_buff_20.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAY0lEQVR4nGNkYGBgEBKV+c9ABfDu9RNGFiFRmf+yk1soNux31yIGBgaG/ywwgYsRCYyUGKhl5PSfgYGBgYkyd2GCUQNHDRw1cNRA+hjIKCQq819CVo0qhr14fIuBkYGBulUAAHuLFS/feMwbAAAAAElFTkSuQmCC",
 "wbl_ui_status_debuff_20.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAXklEQVR4nGNkYGBgEBKV+c9ABfDu9RNGFiFRmf9VYvwUGzaPXZyBgYHhPwtMoOTqVUZKDNQyEv/PwMDAwESZuzDBqIGjBo4aOGogfQxkYWCAFI6w8oxSwMjAQN0qAAC1/BGImzh67AAAAABJRU5ErkJggg==",
@@ -223,6 +258,10 @@ const NEED = {
   pipFull:   "wbl_ui_hppip_full_8.png",
   pipEmpty:  "wbl_ui_hppip_empty_8.png",
   pipDead:   "wbl_ui_hppip_dead_8.png",
+  impactWarn:"wbl_ui_impact_warn_32.png",
+  impactHit: "wbl_ui_impact_hit_32.png",
+  rubble:    "wbl_ui_rubble_32.png",
+  exitT:     "wbl_ui_exit_32.png",
   elev_m2:   "wbl_ui_elev_m2_32.png",
   elev_m1:   "wbl_ui_elev_m1_32.png",
   elev_p1:   "wbl_ui_elev_p1_32.png",
@@ -255,8 +294,31 @@ const S = {
   showHelp: false,
   down: new Set(),
   units: ENCOUNTER.combatants.map(u => Object.assign({}, u)),
+  civs: ENCOUNTER.civilians.map(c => Object.assign({}, c, {out: false, lost: false})),
+  sel: {type: "unit", i: 0},
   mapImg: null,
 };
+
+/* Expand the compact impact spec into concrete tiles per round. Four lines
+   of encounter data become a full telegraph + rubble system. */
+const IMPACT = {};
+for (const spec of ENCOUNTER.impacts) {
+  const tiles = [];
+  for (const cx of spec.cols)
+    for (let ry = 0; ry < ROWS; ry++)
+      if (!(spec.safeRows || []).includes(ry)) tiles.push([cx, ry]);
+  IMPACT[spec.round] = tiles;
+}
+function tilesFor(r) { return IMPACT[r] || []; }
+function inZone(x, y, r) { return tilesFor(r).some(t => t[0] === x && t[1] === y); }
+function isRubble(x, y) {
+  for (let r = 2; r < S.round; r++) if (inZone(x, y, r)) return true;
+  return false;
+}
+function savedCount() { return S.civs.filter(c => c.out).length; }
+function atRisk() {
+  return S.civs.filter(c => !c.out && !c.lost && inZone(c.x, c.y, S.round + 1)).length;
+}
 
 /* -- 7. DRAW ---------------------------------------------------------- */
 
@@ -300,66 +362,96 @@ function drawTopBar() {
   drawText(ctx, "RD " + S.round, CLOCK_X + 14, CLOCK_Y - 9, C.frameLight);
 }
 
+function drawToken(px, py, tag, col, ring, dim) {
+  bevel(px + 3, py + 3, CELL - 6, CELL - 6, col.fill, col.hi, C.ink);
+  ctx.fillStyle = C.ink;
+  ctx.fillRect(px + 2, py + 2, CELL - 4, 1);
+  ctx.fillRect(px + 2, py + CELL - 3, CELL - 4, 1);
+  ctx.fillRect(px + 2, py + 2, 1, CELL - 4);
+  ctx.fillRect(px + CELL - 3, py + 2, 1, CELL - 4);
+  drawTextCentre(ctx, tag, px + CELL / 2, py + CELL / 2 - 3,
+                 dim ? "#8a8a90" : C.parchHi);
+  if (ring) {
+    ctx.fillStyle = ring;
+    ctx.fillRect(px + 1, py + 1, CELL - 2, 1);
+    ctx.fillRect(px + 1, py + CELL - 2, CELL - 2, 1);
+    ctx.fillRect(px + 1, py + 1, 1, CELL - 2);
+    ctx.fillRect(px + CELL - 2, py + 1, 1, CELL - 2);
+  }
+}
+
 function drawBoard() {
   ctx.fillStyle = C.boardBase;
   ctx.fillRect(0, BOARD_Y, NAT_W, BOARD_H);
-
   if (S.mapImg) ctx.drawImage(S.mapImg, 0, BOARD_Y, NAT_W, BOARD_H);
+
+  // evac zone
+  for (const cx of ENCOUNTER.exitCols)
+    for (let ry = 0; ry < ROWS; ry++)
+      if (IMG.exitT) ctx.drawImage(IMG.exitT, cx * CELL, BOARD_Y + ry * CELL);
 
   for (const e of ENCOUNTER.elevation) {
     const key = "elev_" + (e.lv > 0 ? "p" : "m") + Math.abs(e.lv);
     if (IMG[key]) ctx.drawImage(IMG[key], e.x * CELL, BOARD_Y + e.y * CELL);
   }
 
+  // rubble from every round already resolved
+  for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++)
+    if (isRubble(x, y) && IMG.rubble)
+      ctx.drawImage(IMG.rubble, x * CELL, BOARD_Y + y * CELL);
+
   if (S.showGrid && IMG.grid) ctx.drawImage(IMG.grid, 0, BOARD_Y);
 
-  // The plate is drawn BEFORE tokens so a token is never hidden behind it.
-  // Tradeoff: in a crowded corner a token may clip the plate's edge. A
-  // covered label is recoverable; a covered combatant is not.
+  // telegraph next round, then what is landing now
+  for (const [x, y] of tilesFor(S.round + 1))
+    if (IMG.impactWarn) ctx.drawImage(IMG.impactWarn, x * CELL, BOARD_Y + y * CELL);
+  for (const [x, y] of tilesFor(S.round))
+    if (IMG.impactHit) ctx.drawImage(IMG.impactHit, x * CELL, BOARD_Y + y * CELL);
+
   drawActivePlate();
 
+  S.civs.forEach((c, i) => {
+    if (c.out) return;
+    const sel = S.sel.type === "civ" && S.sel.i === i;
+    drawToken(c.x * CELL, BOARD_Y + c.y * CELL, c.tag,
+              c.lost ? {fill: C.dead, hi: "#4a4a50"} : SIDE.civilian,
+              sel ? C.parchHi : null, c.lost);
+  });
+
   S.units.forEach((u, i) => {
-    const px = u.x * CELL, py = BOARD_Y + u.y * CELL;
     const isDown = S.down.has(i);
-    const col = isDown ? {fill: C.dead, hi: "#4a4a50"} : SIDE[u.side];
-    bevel(px + 3, py + 3, CELL - 6, CELL - 6, col.fill, col.hi, C.ink);
-    ctx.fillStyle = C.ink;
-    ctx.fillRect(px + 2, py + 2, CELL - 4, 1);
-    ctx.fillRect(px + 2, py + CELL - 3, CELL - 4, 1);
-    ctx.fillRect(px + 2, py + 2, 1, CELL - 4);
-    ctx.fillRect(px + CELL - 3, py + 2, 1, CELL - 4);
-    drawTextCentre(ctx, u.tag, px + CELL / 2, py + CELL / 2 - 3,
-                   isDown ? "#8a8a90" : C.parchHi);
-    // Active combatant: gold ring on the token itself. A floating tick
-    // collided with neighbouring tokens and the plate.
-    if (i === S.turn) {
-      ctx.fillStyle = C.goldHi;
-      ctx.fillRect(px + 1, py + 1, CELL - 2, 1);
-      ctx.fillRect(px + 1, py + CELL - 2, CELL - 2, 1);
-      ctx.fillRect(px + 1, py + 1, 1, CELL - 2);
-      ctx.fillRect(px + CELL - 2, py + 1, 1, CELL - 2);
-    }
+    const sel = S.sel.type === "unit" && S.sel.i === i;
+    drawToken(u.x * CELL, BOARD_Y + u.y * CELL, u.tag,
+              isDown ? {fill: C.dead, hi: "#4a4a50"} : SIDE[u.side],
+              i === S.turn ? C.goldHi : (sel ? C.parchHi : null), isDown);
   });
 }
 
 function drawActivePlate() {
-  const u = S.units[S.turn];
-  if (!u) return;
-  const plateW = 96, pipW = u.max * 8 + (u.max - 1);
-  let px = Math.round(u.x * CELL + CELL / 2 - plateW / 2);
+  let e, name, hp = null, max = null;
+  if (S.sel.type === "civ") {
+    e = S.civs[S.sel.i]; if (!e || e.out) return; name = e.name;
+  } else {
+    e = S.units[S.sel.i]; if (!e) return;
+    name = e.name; hp = e.hp; max = e.max;
+  }
+  const plateW = 96;
+  let px = Math.round(e.x * CELL + CELL / 2 - plateW / 2);
   px = Math.max(2, Math.min(NAT_W - plateW - 2, px));
-  const above = u.y >= ROWS - 2;
-  let py = above ? BOARD_Y + u.y * CELL - 32 : BOARD_Y + u.y * CELL + CELL + 3;
+  const above = e.y >= ROWS - 2;
+  const py = above ? BOARD_Y + e.y * CELL - 32 : BOARD_Y + e.y * CELL + CELL + 3;
 
   if (IMG.nameplate) ctx.drawImage(IMG.nameplate, px, py);
-  drawTextCentre(ctx, u.name, px + plateW / 2, py + 7, C.parchHi);
+  drawTextCentre(ctx, name, px + plateW / 2, py + 7, C.parchHi);
 
-  const pipY = py + 22;
-  const pipX = Math.round(px + plateW / 2 - pipW / 2);
-  const dead = S.down.has(S.turn);
-  for (let i = 0; i < u.max; i++) {
-    const im = dead ? IMG.pipDead : (i < u.hp ? IMG.pipFull : IMG.pipEmpty);
-    if (im) ctx.drawImage(im, pipX + i * 9, pipY);
+  if (max !== null) {
+    const pipW = max * 8 + (max - 1);
+    const pipX = Math.round(px + plateW / 2 - pipW / 2);
+    const dead = S.down.has(S.sel.i);
+    for (let i = 0; i < max; i++) {
+      const im = dead ? IMG.pipDead : (i < hp ? IMG.pipFull : IMG.pipEmpty);
+      if (im) ctx.drawImage(im, pipX + i * 9, py + 22);
+    }
   }
 }
 
@@ -391,20 +483,36 @@ function drawInitStrip() {
     drawTextCentre(ctx, String(i + 1), x + SLOT / 2, y0 + SLOT + 2,
                    i === S.turn ? C.goldHi : C.frameMid);
   });
+
+  // The score. Not win/lose -- a number they will remember.
+  const total = S.civs.length, lost = S.civs.filter(c => c.lost).length;
+  drawText(ctx, "EVACUATED", 10, INIT_Y + 12, C.frameLight);
+  drawTextShadow(ctx, savedCount() + " / " + total, 10, INIT_Y + 24, C.tealHi, 2);
+  if (lost) drawText(ctx, "LOST " + lost, 10, INIT_Y + 46, C.bloodHi);
+
+  // Civilians standing on tiles that get hit next round.
+  const risk = atRisk(), rl = "AT RISK";
+  drawText(ctx, rl, NAT_W - 10 - textW(rl), INIT_Y + 12, C.frameLight);
+  const rs = String(risk);
+  drawTextShadow(ctx, rs, NAT_W - 10 - textW(rs, 2), INIT_Y + 24,
+                 risk ? C.warn : C.frameMid, 2);
 }
 
 const HELP = [
-  "SPACE / F13    CLOCK DOWN",
+  "SPACE          CLOCK DOWN",
   "SHIFT SPACE    CLOCK UP",
-  "F14            CLOCK UP",
-  "RIGHT / F15    NEXT TURN",
+  "RIGHT          NEXT TURN",
   "LEFT           PREVIOUS TURN",
   "1 TO 9         JUMP TO SLOT",
-  "D / F16        TOGGLE DOWNED",
-  "X              DAMAGE ACTIVE",
-  "S              HEAL ACTIVE",
-  "L / F17        TOGGLE LAW",
-  "R / F18        RESET CLOCK",
+  "NUMPAD 8462    MOVE SELECTED",
+  "C              CYCLE CIVILIAN",
+  "V              BACK TO ACTIVE",
+  "K              MARK CIV LOST",
+  "X              DAMAGE",
+  "S              HEAL",
+  "D              TOGGLE DOWNED",
+  "L              TOGGLE LAW",
+  "R              RESET CLOCK",
   "G              TOGGLE GRID",
   "H              THIS PANEL",
 ];
@@ -412,7 +520,7 @@ const HELP = [
 function drawHelp() {
   ctx.fillStyle = "rgba(10,12,17,0.93)";
   ctx.fillRect(0, 0, NAT_W, NAT_H);
-  const w = 260, h = HELP.length * 10 + 34;
+  const w = 272, h = HELP.length * 10 + 34;
   const x = Math.round((NAT_W - w) / 2), y = Math.round((NAT_H - h) / 2);
   bevel(x, y, w, h, C.inkSoft, C.frameMid, C.frameDark);
   ctx.strokeStyle = C.gold; ctx.lineWidth = 1;
@@ -452,37 +560,59 @@ function nextTurn(step) {
   const n = S.units.length;
   S.turn += step;
   if (S.turn >= n) { S.turn = 0; S.round++; }
-  if (S.turn < 0)  { S.turn = n - 1; S.round = Math.max(1, S.round - 1); }
+  if (S.turn < 0) { S.turn = n - 1; S.round = Math.max(1, S.round - 1); }
+  S.sel = {type: "unit", i: S.turn};
 }
 
+function moveSel(dx, dy) {
+  const e = S.sel.type === "civ" ? S.civs[S.sel.i] : S.units[S.sel.i];
+  if (!e || e.out) return;
+  const nx = Math.max(0, Math.min(COLS - 1, e.x + dx));
+  const ny = Math.max(0, Math.min(ROWS - 1, e.y + dy));
+  if (isRubble(nx, ny)) return;                 // rubble is impassable
+  e.x = nx; e.y = ny;
+  // A civilian who reaches the metro counts itself. No extra keypress.
+  if (S.sel.type === "civ" && ENCOUNTER.exitCols.includes(nx)) e.out = true;
+}
+
+function cycleCiv() {
+  const live = S.civs.map((c, i) => ({c, i})).filter(o => !o.c.out);
+  if (!live.length) return;
+  const cur = S.sel.type === "civ" ? S.sel.i : -1;
+  S.sel = {type: "civ", i: (live.find(o => o.i > cur) || live[0]).i};
+}
+
+function selUnit() { return S.sel.type === "unit" ? S.sel.i : S.turn; }
+
 const KEYS = {
-  " ":        e => { S.clock = e.shiftKey
-                       ? Math.min(ENCOUNTER.clockMax, S.clock + 1)
-                       : Math.max(0, S.clock - 1); },
-  "F13":      () => { S.clock = Math.max(0, S.clock - 1); },
-  "F14":      () => { S.clock = Math.min(ENCOUNTER.clockMax, S.clock + 1); },
+  " ": e => { S.clock = e.shiftKey ? Math.min(ENCOUNTER.clockMax, S.clock + 1)
+                                   : Math.max(0, S.clock - 1); },
   "ArrowRight": () => nextTurn(1),
-  "F15":        () => nextTurn(1),
   "ArrowLeft":  () => nextTurn(-1),
-  "d":  () => { S.down.has(S.turn) ? S.down.delete(S.turn) : S.down.add(S.turn); },
-  "F16":() => { S.down.has(S.turn) ? S.down.delete(S.turn) : S.down.add(S.turn); },
-  "x":  () => { const u = S.units[S.turn]; if (u) u.hp = Math.max(0, u.hp - 1); },
-  "s":  () => { const u = S.units[S.turn]; if (u) u.hp = Math.min(u.max, u.hp + 1); },
-  "l":  () => { S.lawOn = !S.lawOn; },
-  "F17":() => { S.lawOn = !S.lawOn; },
-  "r":  () => { S.clock = ENCOUNTER.clockMax; },
-  "F18":() => { S.clock = ENCOUNTER.clockMax; },
-  "g":  () => { S.showGrid = !S.showGrid; },
-  "h":  () => { S.showHelp = !S.showHelp; },
-  "?":  () => { S.showHelp = !S.showHelp; },
+  "c": cycleCiv,
+  "v": () => { S.sel = {type: "unit", i: S.turn}; },
+  "k": () => { if (S.sel.type === "civ") { const c = S.civs[S.sel.i]; if (c) c.lost = !c.lost; } },
+  "x": () => { const u = S.units[selUnit()]; if (u) u.hp = Math.max(0, u.hp - 1); },
+  "s": () => { const u = S.units[selUnit()]; if (u) u.hp = Math.min(u.max, u.hp + 1); },
+  "d": () => { const i = selUnit(); S.down.has(i) ? S.down.delete(i) : S.down.add(i); },
+  "l": () => { S.lawOn = !S.lawOn; },
+  "r": () => { S.clock = ENCOUNTER.clockMax; },
+  "g": () => { S.showGrid = !S.showGrid; },
+  "h": () => { S.showHelp = !S.showHelp; },
+  "?": () => { S.showHelp = !S.showHelp; },
   "Escape": () => { S.showHelp = false; },
 };
 
+// Numpad via e.code so it never collides with 1-9 initiative jumps.
+const PAD = {Numpad8: [0,-1], Numpad2: [0,1], Numpad4: [-1,0], Numpad6: [1,0],
+             Numpad7: [-1,-1], Numpad9: [1,-1], Numpad1: [-1,1], Numpad3: [1,1]};
+
 window.addEventListener("keydown", e => {
+  if (PAD[e.code]) { moveSel.apply(null, PAD[e.code]); draw(); e.preventDefault(); return; }
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   if (/^[1-9]$/.test(k)) {
     const i = parseInt(k, 10) - 1;
-    if (i < S.units.length) { S.turn = i; draw(); e.preventDefault(); }
+    if (i < S.units.length) { S.turn = i; S.sel = {type:"unit", i}; draw(); e.preventDefault(); }
     return;
   }
   const fn = KEYS[k];
