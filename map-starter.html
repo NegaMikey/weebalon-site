@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pergunum — Map</title>
+
+<style>
+  /* ---- TEMP: flip this off when you're done placing hotspots ---- */
+  .debug .hotspot {
+    background: rgba(255, 0, 128, 0.35);
+    outline: 1px solid rgba(255, 0, 128, 0.9);
+  }
+  .debug .hotspot::after {
+    content: attr(data-name);
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font: 11px monospace;
+    color: #fff;
+    text-shadow: 0 0 3px #000;
+  }
+  /* -------------------------------------------------------------- */
+
+  body {
+    margin: 0;
+    background: #14161f;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* The container is the thing everything is positioned against.
+     position: relative is what makes the absolute hotspots inside
+     measure from THIS box instead of from the whole page. */
+  .map-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;   /* stops the map getting absurd on huge screens */
+    line-height: 0;      /* kills the sliver of gap under the image */
+  }
+
+  .map-wrap img {
+    width: 100%;
+    height: auto;
+    display: block;
+    image-rendering: pixelated;  /* keeps pixel art crisp instead of blurry */
+  }
+
+  /* Each hotspot is an <a> floating on top of the image.
+     All four values are PERCENTAGES, so they stay glued to the
+     right spot no matter how big or small the image renders. */
+  .hotspot {
+    position: absolute;
+    display: block;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: background 120ms ease, transform 120ms ease;
+  }
+
+  .hotspot:hover,
+  .hotspot:focus-visible {
+    background: rgba(232, 163, 61, 0.30);
+    outline: 2px solid #e8a33d;
+    transform: scale(1.02);
+  }
+
+  /* Screen-reader / keyboard label that stays invisible on screen */
+  .hotspot span {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hotspot { transition: none; }
+    .hotspot:hover { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Remove the word "debug" from this class when hotspots are placed -->
+<div class="map-wrap debug">
+
+  <img src="pergunum-labeled.png" alt="Map of Pergunum">
+
+  <!-- ============================================================
+       ONE HOTSPOT. Copy this block for each location.
+
+       top/left  = where the TOP-LEFT CORNER sits
+       width/height = how big the box is
+
+       All in % of the image. So left:20%; top:35%; means
+       "20% across from the left edge, 35% down from the top".
+       ============================================================ -->
+  <a class="hotspot"
+     data-name="Location One"
+     href="locations/location-one.html"
+     style="left: 20%; top: 35%; width: 12%; height: 9%;">
+     <span>Location One</span>
+  </a>
+
+  <!-- Copy-paste more like this:
+
+  <a class="hotspot"
+     data-name="Location Two"
+     href="locations/location-two.html"
+     style="left: 55%; top: 22%; width: 10%; height: 8%;">
+     <span>Location Two</span>
+  </a>
+
+  -->
+
+</div>
+
+<!-- ================================================================
+     PLACEMENT HELPER — delete this whole <script> when you're done.
+     Click anywhere on the map and it prints the % coords to the
+     console (F12 → Console) AND copies a ready-made hotspot block
+     to your clipboard. Beats guessing numbers by hand.
+     ================================================================ -->
+<script>
+  document.querySelector('.map-wrap').addEventListener('click', function (e) {
+    // Don't fire when clicking an existing hotspot
+    if (e.target.closest('.hotspot')) return;
+
+    const box = this.getBoundingClientRect();
+    const left = (((e.clientX - box.left) / box.width) * 100).toFixed(1);
+    const top = (((e.clientY - box.top) / box.height) * 100).toFixed(1);
+
+    const snippet =
+`<a class="hotspot"
+   data-name="NAME ME"
+   href="locations/name-me.html"
+   style="left: ${left}%; top: ${top}%; width: 10%; height: 8%;">
+   <span>NAME ME</span>
+</a>`;
+
+    console.log(`left: ${left}%  top: ${top}%`);
+    console.log(snippet);
+
+    navigator.clipboard?.writeText(snippet)
+      .then(() => console.log('↑ copied to clipboard'))
+      .catch(() => {});
+  });
+</script>
+
+</body>
+</html>
